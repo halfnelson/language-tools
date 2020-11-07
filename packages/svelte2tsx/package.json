@@ -32,13 +32,14 @@
         "@rollup/plugin-typescript": "^6.0.0",
         "source-map": "^0.6.1",
         "source-map-support": "^0.5.16",
-        "svelte": "3.28.0",
+        "svelte-parse": "^0.0.2",
+        "svast": "^0.0.2",
+        "svast-utils": "^0.0.2",
         "tiny-glob": "^0.2.6",
         "tslib": "^1.10.0",
         "typescript": "^4.0.2"
     },
     "peerDependencies": {
-        "svelte": "^3.24",
         "typescript": "^4.0.2"
     },
     "scripts": {

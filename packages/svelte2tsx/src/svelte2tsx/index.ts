@@ -1,4 +1,5 @@
 import { Node } from 'estree-walker';
+import { Node as SvastNode } from 'svast';
 import MagicString from 'magic-string';
 import { pascalCase } from 'pascal-case';
 import path from 'path';

@@ -16,8 +16,8 @@
         "allowSyntheticDefaultImports": true,
 
         "noImplicitThis": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true
+        //"noUnusedLocals": true,
+        //"noUnusedParameters": true
     },
     "paths": {
         "@/*": ["src/*"]

@@ -1,6 +1,7 @@
-import { Node } from 'estree-walker';
+import { Node, BranchingBlock, EachBlock, VoidBlock, SvelteMeta, SvelteComponent, SvelteElement, Comment, Branch, Directive, Property } from 'svast';
+import { walk } from 'svast-utils';
 import MagicString from 'magic-string';
-import svelte from 'svelte/compiler';
+
 import { parseHtmlx } from '../utils/htmlxparser';
 import { handleActionDirective } from './nodes/action-directive';
 import { handleAnimateDirective } from './nodes/animation-directive';
@@ -15,10 +16,11 @@ import { handleDebug } from './nodes/debug';
 import { handleEach } from './nodes/each';
 import { handleElement } from './nodes/element';
 import { handleEventHandler } from './nodes/event-handler';
-import { handleElse, handleIf } from './nodes/if-else';
+import { handleIf } from './nodes/if-else';
 import { handleRawHtml } from './nodes/raw-html';
 import { handleSvelteTag } from './nodes/svelte-tag';
 import { handleTransitionDirective } from './nodes/transition-directive';
+
 
 type Walker = (node: Node, parent: Node, prop: string, index: number) => void;
 
@@ -36,101 +38,102 @@ function stripDoctype(str: MagicString): void {
  */
 export function convertHtmlxToJsx(
     str: MagicString,
-    ast: Node,
-    onWalk: Walker = null,
-    onLeave: Walker = null
+    ast: Node
 ): void {
     const htmlx = str.original;
     stripDoctype(str);
     str.prepend('<>');
     str.append('</>');
 
-    (svelte as any).walk(ast, {
-        enter: (node: Node, parent: Node, prop: string, index: number) => {
-            try {
-                switch (node.type) {
-                    case 'IfBlock':
-                        handleIf(htmlx, str, node);
-                        break;
-                    case 'EachBlock':
-                        handleEach(htmlx, str, node);
-                        break;
-                    case 'ElseBlock':
-                        handleElse(htmlx, str, node, parent);
-                        break;
-                    case 'AwaitBlock':
-                        handleAwait(htmlx, str, node);
-                        break;
-                    case 'KeyBlock':
-                        handleKey(htmlx, str, node);
-                        break;
-                    case 'RawMustacheTag':
-                        handleRawHtml(htmlx, str, node);
-                        break;
-                    case 'DebugTag':
-                        handleDebug(htmlx, str, node);
-                        break;
-                    case 'InlineComponent':
-                        handleComponent(htmlx, str, node);
-                        break;
-                    case 'Element':
-                        handleElement(htmlx, str, node);
-                        break;
-                    case 'Comment':
-                        handleComment(str, node);
-                        break;
-                    case 'Binding':
-                        handleBinding(htmlx, str, node, parent);
-                        break;
-                    case 'Class':
-                        handleClassDirective(str, node);
-                        break;
-                    case 'Action':
-                        handleActionDirective(htmlx, str, node, parent);
-                        break;
-                    case 'Transition':
-                        handleTransitionDirective(htmlx, str, node);
-                        break;
-                    case 'Animation':
-                        handleAnimateDirective(htmlx, str, node);
-                        break;
-                    case 'Attribute':
-                        handleAttribute(htmlx, str, node, parent);
-                        break;
-                    case 'EventHandler':
-                        handleEventHandler(htmlx, str, node, parent);
-                        break;
-                    case 'Options':
-                        handleSvelteTag(htmlx, str, node);
-                        break;
-                    case 'Window':
-                        handleSvelteTag(htmlx, str, node);
-                        break;
-                    case 'Head':
-                        handleSvelteTag(htmlx, str, node);
-                        break;
-                    case 'Body':
-                        handleSvelteTag(htmlx, str, node);
-                        break;
-                }
-                if (onWalk) {
-                    onWalk(node, parent, prop, index);
-                }
-            } catch (e) {
-                console.error('Error walking node ', node);
-                throw e;
-            }
-        },
+    walk(ast, (node: Node, parent: Node) => {
+        try {
+            switch (node.type) {
+                
+                case 'svelteBranchingBlock':
+                    const bb = node as BranchingBlock;
 
-        leave: (node: Node, parent: Node, prop: string, index: number) => {
-            try {
-                if (onLeave) {
-                    onLeave(node, parent, prop, index);
+                    switch (bb.name as string) {
+                        case 'if':
+                            handleIf(htmlx, str, bb);
+                            break;
+                        /*
+                        case 'await':
+                            handleAwait(htmlx, str, bb);
+                            break;
+
+                        case 'key':
+                            handleKey(htmlx, str, bb);
+                            break;
+                        */
+                    }
+
+                /*
+                case 'svelteEachBlock':
+                    handleEach(htmlx, str, node as EachBlock);
+                    break;
+
+                case 'svelteVoidBlock':
+                    const vb = node as VoidBlock;
+
+                    switch (vb.name) {
+                        case 'html': 
+                            handleRawHtml(htmlx, str, node);
+                            break;
+                        case 'debug':
+                            handleDebug(htmlx, str, node);
+                            break;
+                    }
+                    break;
+            
+                case 'svelteTag': 
+                    //svelte:(options,window,head,body)
+                    handleSvelteTag(htmlx, str, node as SvelteMeta);
+                    break;
+
+                case 'svelteComponent':
+                    handleComponent(htmlx, str, node as SvelteComponent);
+                    break;
+
+                case 'svelteElement':
+                    handleElement(htmlx, str, node as SvelteElement);
+                    break;
+
+                case 'comment':
+                    handleComment(str, node as Comment);
+                    break;
+
+                case 'svelteProperty':
+                    handleAttribute(htmlx, str, node as Property, parent)
+                
+                case 'svelteDirective':
+                    const dir = node as Directive;
+                    switch (dir.name) {
+                        case 'bind':
+                            handleBinding(htmlx, str, node, parent);
+                            break;
+                        case 'class':
+                            handleClassDirective(htmlx, str, node)
+                            break;
+                        case 'use':
+                            handleActionDirective(htmlx, str, node, parent)
+                            break;
+                        case 'in':
+                        case 'out':
+                        case 'transition':
+                            handleTransitionDirective(htmlx, str, node);
+                            break;
+                        case 'animate':
+                            handleAnimateDirective(htmlx, str, node);
+                            break;
+                        case 'on':
+                            handleEventHandler(htmlx, str, node, parent);
+                            break;
+                    }
+                    break; */
                 }
-            } catch (e) {
-                console.error('Error leaving node ', node);
-                throw e;
-            }
+        } catch (e) {
+            console.error('Error walking node ', node);
+            throw e;
         }
     });
 }
