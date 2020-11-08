@@ -1,5 +1,4 @@
 import MagicString from 'magic-string';
-import { Node } from 'estree-walker';
 import * as ts from 'typescript';
 import {
     findExportKeyword,
@@ -10,6 +9,7 @@ import { ExportedNames } from './nodes/ExportedNames';
 import { ImplicitTopLevelNames } from './nodes/ImplicitTopLevelNames';
 import { ComponentEvents } from './nodes/ComponentEvents';
 import { Scope } from './utils/Scope';
+import { SvelteScript } from 'svast';
 
 export interface InstanceScriptProcessResult {
     exportedNames: ExportedNames;
@@ -28,11 +28,11 @@ type PendingStoreResolution<T> = {
 
 export function processInstanceScriptContent(
     str: MagicString,
-    script: Node,
+    script: SvelteScript,
     events: ComponentEvents
 ): InstanceScriptProcessResult {
     const htmlx = str.original;
-    const scriptContent = htmlx.substring(script.content.start, script.content.end);
+    const scriptContent = htmlx.substring(script.children[0].position.start.offset, script.children[0].position.end.offset);
     const tsAst = ts.createSourceFile(
         'component.ts.svelte',
         scriptContent,
@@ -40,7 +40,7 @@ export function processInstanceScriptContent(
         true,
         ts.ScriptKind.TS
     );
-    const astOffset = script.content.start;
+    const astOffset = script.children[0].position.start.offset;
     const exportedNames = new ExportedNames();
     const getters = new Set<string>();
 
@@ -390,7 +390,7 @@ export function processInstanceScriptContent(
 
         if (ts.isImportDeclaration(node)) {
             //move imports to top of script so they appear outside our render function
-            str.move(node.getStart() + astOffset, node.end + astOffset, script.start + 1);
+            str.move(node.getStart() + astOffset, node.end + astOffset, script.position.start.offset + 1);
             //add in a \n
             const originalEndChar = str.original[node.end + astOffset - 1];
             str.overwrite(node.end + astOffset - 1, node.end + astOffset, originalEndChar + '\n');

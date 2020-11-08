@@ -1,11 +1,10 @@
 import MagicString from 'magic-string';
-import { Node } from 'estree-walker';
-export function processModuleScriptTag(str: MagicString, script: Node) {
-    const htmlx = str.original;
+import { SvelteScript } from 'svast';
 
-    const scriptStartTagEnd = htmlx.indexOf('>', script.start) + 1;
-    const scriptEndTagStart = htmlx.lastIndexOf('<', script.end - 1);
+export function processModuleScriptTag(str: MagicString, script: SvelteScript) {
+    const scriptStartTagEnd = script.children[0].position.start.offset - 1;
+    const scriptEndTagStart = script.children[script.children.length - 1].position.end.offset + 1;
 
-    str.overwrite(script.start, scriptStartTagEnd, '</>;');
-    str.overwrite(scriptEndTagStart, script.end, ';<>');
+    str.overwrite(script.position.start.offset, scriptStartTagEnd, '</>;');
+    str.overwrite(scriptEndTagStart, script.position.end.offset, ';<>');
 }

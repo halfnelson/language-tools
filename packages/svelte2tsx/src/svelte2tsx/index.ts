@@ -1,5 +1,4 @@
-import { Node } from 'estree-walker';
-import { Node as SvastNode } from 'svast';
+import { Comment, Node, SvelteScript } from 'svast';
 import MagicString from 'magic-string';
 import { pascalCase } from 'pascal-case';
 import path from 'path';
@@ -27,7 +26,7 @@ import { ScopeStack } from './utils/Scope';
 
 interface CreateRenderFunctionPara extends InstanceScriptProcessResult {
     str: MagicString;
-    scriptTag: Node;
+    scriptTag: SvelteScript;
     scriptDestination: number;
     slots: Map<string, Map<string, string>>;
     events: ComponentEvents;
@@ -54,8 +53,8 @@ type TemplateProcessResult = {
     uses$$restProps: boolean;
     uses$$slots: boolean;
     slots: Map<string, Map<string, string>>;
-    scriptTag: Node;
-    moduleScriptTag: Node;
+    scriptTag: SvelteScript;
+    moduleScriptTag: SvelteScript;
     /** To be added later as a comment on the default class export */
     componentDocumentation: ComponentDocumentation;
     events: ComponentEvents;
@@ -103,7 +102,7 @@ function processSvelteTemplate(str: MagicString): TemplateProcessResult {
     };
 
     const handleStyleTag = (node: Node) => {
-        str.remove(node.start, node.end);
+        str.remove(node.position.start.offset, node.position.end.offset);
     };
 
     const slotHandler = new SlotHandler(str.original);
@@ -113,32 +112,32 @@ function processSvelteTemplate(str: MagicString): TemplateProcessResult {
         templateScope = templateScope.child();
 
         if (node.context) {
-            handleScopeAndResolveForSlotInner(node.context, node.expression, node);
+            //handleScopeAndResolveForSlotInner(node.context, node.expression, node);
         }
     };
 
     const handleAwait = (node: Node) => {
         templateScope = templateScope.child();
         if (node.value) {
-            handleScopeAndResolveForSlotInner(node.value, node.expression, node.then);
+           // handleScopeAndResolveForSlotInner(node.value, node.expression, node.then);
         }
         if (node.error) {
-            handleScopeAndResolveForSlotInner(node.error, node.expression, node.catch);
+            //handleScopeAndResolveForSlotInner(node.error, node.expression, node.catch);
         }
     };
 
     const handleComponentLet = (component: Node) => {
         templateScope = templateScope.child();
-        const lets = slotHandler.getSlotConsumerOfComponent(component);
+        const lets = null //slotHandler.getSlotConsumerOfComponent(component);
 
         for (const { letNode, slotName } of lets) {
-            handleScopeAndResolveLetVarForSlot({
-                letNode,
-                slotName,
-                slotHandler,
-                templateScope,
-                component
-            });
+          //  handleScopeAndResolveLetVarForSlot({
+           //     letNode,
+           //     slotName,
+          //      slotHandler,
+         //       templateScope,
+         //       component
+         //   });
         }
     };
 
@@ -147,18 +146,18 @@ function processSvelteTemplate(str: MagicString): TemplateProcessResult {
         initExpression: Node,
         owner: Node
     ) => {
-        handleScopeAndResolveForSlot({
+      /*  handleScopeAndResolveForSlot({
             identifierDef,
             initExpression,
             slotHandler,
             templateScope,
             owner
-        });
+        }); */
     };
 
     const eventHandler = new EventHandler();
 
-    const onHtmlxWalk = (node: Node, parent: Node, prop: string) => {
+    const onHtmlxWalk = (node: Node, parent: Node, prop: string, index: number) => {
         if (
             prop == 'params' &&
             (parent.type == 'FunctionDeclaration' || parent.type == 'ArrowFunctionExpression')
@@ -171,8 +170,9 @@ function processSvelteTemplate(str: MagicString): TemplateProcessResult {
 
         switch (node.type) {
             case 'Comment':
-                componentDocumentation.handleComment(node);
+                componentDocumentation.handleComment(node as Comment);
                 break;
+            /*
             case 'Identifier':
                 handleIdentifier(node);
                 stores.handleIdentifier(node, parent, prop);
@@ -210,12 +210,13 @@ function processSvelteTemplate(str: MagicString): TemplateProcessResult {
                 break;
             case 'InlineComponent':
                 handleComponentLet(node);
-                break;
+                break; */
         }
     };
 
-    const onHtmlxLeave = (node: Node, parent: Node, prop: string, _index: number) => {
-        if (
+    const onHtmlxLeave = (node: Node, parent: Node, prop: string, index: number) => {
+      
+      /*  if (
             prop == 'params' &&
             (parent.type == 'FunctionDeclaration' || parent.type == 'ArrowFunctionExpression')
         ) {
@@ -248,7 +249,7 @@ function processSvelteTemplate(str: MagicString): TemplateProcessResult {
             case 'InlineComponent':
                 onTemplateScopeLeave();
                 break;
-        }
+        } */
     };
 
     convertHtmlxToJsx(str, htmlxAst, onHtmlxWalk, onHtmlxLeave);
@@ -365,13 +366,13 @@ function createRenderFunction({
 
     if (scriptTag) {
         //I couldn't get magicstring to let me put the script before the <> we prepend during conversion of the template to jsx, so we just close it instead
-        const scriptTagEnd = htmlx.lastIndexOf('>', scriptTag.content.start) + 1;
-        str.overwrite(scriptTag.start, scriptTag.start + 1, '</>;');
-        str.overwrite(scriptTag.start + 1, scriptTagEnd, `function render() {${propsDecl}\n`);
+        const scriptTagEnd = scriptTag.children[0].position.start.offset;
+        str.overwrite(scriptTag.position.start.offset, scriptTag.position.start.offset + 1, '</>;');
+        str.overwrite(scriptTag.position.start.offset + 1, scriptTagEnd, `function render() {${propsDecl}\n`);
 
-        const scriptEndTagStart = htmlx.lastIndexOf('<', scriptTag.end - 1);
+        const scriptEndTagStart = scriptTag.children[scriptTag.children.length - 1].position.end.offset + 1;
         // wrap template with callback
-        str.overwrite(scriptEndTagStart, scriptTag.end, ';\n() => (<>', {
+        str.overwrite(scriptEndTagStart, scriptTag.position.end.offset, ';\n() => (<>', {
             contentOnly: true
         });
     } else {
@@ -431,10 +432,10 @@ export function svelte2tsx(
     if (moduleScriptTag) {
         if (moduleScriptTag.start != 0) {
             //move our module tag to the top
-            str.move(moduleScriptTag.start, moduleScriptTag.end, 0);
+            str.move(moduleScriptTag.position.start.offset, moduleScriptTag.position.end.offset, 0);
         } else {
             //since our module script was already at position 0, we need to move our instance script tag to the end of it.
-            instanceScriptTarget = moduleScriptTag.end;
+            instanceScriptTarget = moduleScriptTag.position.end.offset;
         }
     }
 
@@ -443,8 +444,8 @@ export function svelte2tsx(
     let getters = new Set<string>();
     if (scriptTag) {
         //ensure it is between the module script and the rest of the template (the variables need to be declared before the jsx template)
-        if (scriptTag.start != instanceScriptTarget) {
-            str.move(scriptTag.start, scriptTag.end, instanceScriptTarget);
+        if (scriptTag.position.start.offset != instanceScriptTarget) {
+            str.move(scriptTag.position.start.offset, scriptTag.position.end.offset, instanceScriptTarget);
         }
         const res = processInstanceScriptContent(str, scriptTag, events);
         uses$$props = uses$$props || res.uses$$props;

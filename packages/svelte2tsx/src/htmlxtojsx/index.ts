@@ -1,5 +1,5 @@
 import { Node, BranchingBlock, EachBlock, VoidBlock, SvelteMeta, SvelteComponent, SvelteElement, Comment, Branch, Directive, Property } from 'svast';
-import { walk } from 'svast-utils';
+import { walk } from './utils/svelteAstWalker';
 import MagicString from 'magic-string';
 
 import { parseHtmlx } from '../utils/htmlxparser';
@@ -38,102 +38,112 @@ function stripDoctype(str: MagicString): void {
  */
 export function convertHtmlxToJsx(
     str: MagicString,
-    ast: Node
+    ast: Node,
+    onEnter: (node: Node, parent: Node, prop: string, index: number) => boolean | void = null,
+    onLeave: (node: Node, parent: Node, prop: string, index: number) => void = null
 ): void {
     const htmlx = str.original;
     stripDoctype(str);
     str.prepend('<>');
     str.append('</>');
 
-    walk(ast, (node: Node, parent: Node) => {
-        try {
-            switch (node.type) {
+    walk(ast, {
+        onEnter: (node: Node, parent: Node, prop: string, index: number) => {
+
+            try {
+                switch (node.type) {
+                    case 'svelteBranchingBlock':
+                        const bb = node as BranchingBlock;
+
+                        switch (bb.name as string) {
+                            case 'if':
+                                handleIf(htmlx, str, bb);
+                                break;
+                            /*
+                            case 'await':
+                                handleAwait(htmlx, str, bb);
+                                break;
+    
+                            case 'key':
+                                handleKey(htmlx, str, bb);
+                                break;
+                            */
+                        }
+
+                    /*
+                    case 'svelteEachBlock':
+                        handleEach(htmlx, str, node as EachBlock);
+                        break;
+    
+                    case 'svelteVoidBlock':
+                        const vb = node as VoidBlock;
+    
+                        switch (vb.name) {
+                            case 'html': 
+                                handleRawHtml(htmlx, str, node);
+                                break;
+                            case 'debug':
+                                handleDebug(htmlx, str, node);
+                                break;
+                        }
+                        break;
                 
-                case 'svelteBranchingBlock':
-                    const bb = node as BranchingBlock;
-
-                    switch (bb.name as string) {
-                        case 'if':
-                            handleIf(htmlx, str, bb);
-                            break;
-                        /*
-                        case 'await':
-                            handleAwait(htmlx, str, bb);
-                            break;
-
-                        case 'key':
-                            handleKey(htmlx, str, bb);
-                            break;
-                        */
-                    }
-
-                /*
-                case 'svelteEachBlock':
-                    handleEach(htmlx, str, node as EachBlock);
-                    break;
-
-                case 'svelteVoidBlock':
-                    const vb = node as VoidBlock;
-
-                    switch (vb.name) {
-                        case 'html': 
-                            handleRawHtml(htmlx, str, node);
-                            break;
-                        case 'debug':
-                            handleDebug(htmlx, str, node);
-                            break;
-                    }
-                    break;
-            
-                case 'svelteTag': 
-                    //svelte:(options,window,head,body)
-                    handleSvelteTag(htmlx, str, node as SvelteMeta);
-                    break;
-
-                case 'svelteComponent':
-                    handleComponent(htmlx, str, node as SvelteComponent);
-                    break;
-
-                case 'svelteElement':
-                    handleElement(htmlx, str, node as SvelteElement);
-                    break;
-
-                case 'comment':
-                    handleComment(str, node as Comment);
-                    break;
-
-                case 'svelteProperty':
-                    handleAttribute(htmlx, str, node as Property, parent)
-                
-                case 'svelteDirective':
-                    const dir = node as Directive;
-                    switch (dir.name) {
-                        case 'bind':
-                            handleBinding(htmlx, str, node, parent);
-                            break;
-                        case 'class':
-                            handleClassDirective(htmlx, str, node)
-                            break;
-                        case 'use':
-                            handleActionDirective(htmlx, str, node, parent)
-                            break;
-                        case 'in':
-                        case 'out':
-                        case 'transition':
-                            handleTransitionDirective(htmlx, str, node);
-                            break;
-                        case 'animate':
-                            handleAnimateDirective(htmlx, str, node);
-                            break;
-                        case 'on':
-                            handleEventHandler(htmlx, str, node, parent);
-                            break;
-                    }
-                    break; */
+                    case 'svelteTag': 
+                        //svelte:(options,window,head,body)
+                        handleSvelteTag(htmlx, str, node as SvelteMeta);
+                        break;
+    
+                    case 'svelteComponent':
+                        handleComponent(htmlx, str, node as SvelteComponent);
+                        break;
+    
+                    case 'svelteElement':
+                        handleElement(htmlx, str, node as SvelteElement);
+                        break;
+    
+                    case 'comment':
+                        handleComment(str, node as Comment);
+                        break;
+    
+                    case 'svelteProperty':
+                        handleAttribute(htmlx, str, node as Property, parent)
+                    
+                    case 'svelteDirective':
+                        const dir = node as Directive;
+                        switch (dir.name) {
+                            case 'bind':
+                                handleBinding(htmlx, str, node, parent);
+                                break;
+                            case 'class':
+                                handleClassDirective(htmlx, str, node)
+                                break;
+                            case 'use':
+                                handleActionDirective(htmlx, str, node, parent)
+                                break;
+                            case 'in':
+                            case 'out':
+                            case 'transition':
+                                handleTransitionDirective(htmlx, str, node);
+                                break;
+                            case 'animate':
+                                handleAnimateDirective(htmlx, str, node);
+                                break;
+                            case 'on':
+                                handleEventHandler(htmlx, str, node, parent);
+                                break;
+                        }
+                        break; */
                 }
-        } catch (e) {
-            console.error('Error walking node ', node);
-            throw e;
+                onEnter?.(node, parent, prop, index);
+
+            } catch (e) {
+                console.error('Error walking node ', node);
+                throw e;
+            }
+        },
+
+        onLeave: (node: Node, parent: Node, prop: string, index: number) => {
+            onLeave?.(node, parent, prop, index);
         }
     });
 }

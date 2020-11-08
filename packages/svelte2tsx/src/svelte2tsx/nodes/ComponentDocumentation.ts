@@ -1,4 +1,4 @@
-import { Node } from 'estree-walker';
+import { Comment } from 'svast';
 import dedent from 'dedent-js';
 
 /**
@@ -10,13 +10,9 @@ const COMPONENT_DOCUMENTATION_HTML_COMMENT_TAG = '@component';
 export class ComponentDocumentation {
     private componentDocumentation = '';
 
-    handleComment = (node: Node) => {
-        if (
-            'data' in node &&
-            typeof node.data === 'string' &&
-            node.data.includes(COMPONENT_DOCUMENTATION_HTML_COMMENT_TAG)
-        ) {
-            this.componentDocumentation = node.data
+    handleComment = (node: Comment) => {
+        if ((node.value as string).includes(COMPONENT_DOCUMENTATION_HTML_COMMENT_TAG)) {
+            this.componentDocumentation = (node.value as string)
                 .replace(COMPONENT_DOCUMENTATION_HTML_COMMENT_TAG, '')
                 .trim();
         }
