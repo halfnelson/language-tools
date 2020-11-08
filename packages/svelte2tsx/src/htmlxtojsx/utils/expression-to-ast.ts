@@ -1,4 +1,4 @@
-import ts from 'typescript';
+import ts, { ElementAccessExpression, ExpressionStatement, Identifier, SourceFile } from 'typescript';
 import { Point, SvelteExpression } from 'svast'
 
 // generates a string where the next character would resolve to "point"
@@ -37,7 +37,8 @@ export function generate_source_file_for_expression(expr: SvelteExpression): str
     return prefix + expression_content + ")"
 }
 
-export function expression_to_ast(expr: SvelteExpression): ts.Expression {
+
+function expression_as_statements(expr: SvelteExpression): ts.NodeArray<ts.Statement> {
     // Try to ensure our position etc line up with the source
     const tsAst = ts.createSourceFile(
         `expression-${expr.position.start.line}_{${expr.position.start.column}}.ts`,
@@ -46,11 +47,85 @@ export function expression_to_ast(expr: SvelteExpression): ts.Expression {
         true,
         ts.ScriptKind.TS
     );
+    return tsAst.statements;
+}
 
-    const expressionStatement = tsAst.statements.find(v => ts.isExpressionStatement(v)) as ts.ExpressionStatement
+
+export function expression_to_ast(expr: SvelteExpression): ts.Expression {
+    const tsStatements = expression_as_statements(expr);
+    const expressionStatement = tsStatements.find(v => ts.isExpressionStatement(v)) as ts.ExpressionStatement
     if (!expressionStatement || !ts.isParenthesizedExpression(expressionStatement.expression)) {
         console.warn(`Couldn't extract typescript expression from svelte expression at ${expr.position.start.line}:${expr.position.start.column}`)
         return null;
     }
     return expressionStatement.expression.expression;
+}
+
+export function parse_await_expression(expr: SvelteExpression): { promiseExpr: ts.Expression, hasThen: boolean, thenExpr?: ts.Expression } {
+    //try and parse it
+    let statements = expression_as_statements(expr);
+    
+    //if there is only one statement then we don't have a then block
+    if (statements.length == 1) {
+        const expressionStatement = statements.find(v => ts.isExpressionStatement(v)) as ts.ExpressionStatement
+        if (!expressionStatement || !ts.isParenthesizedExpression(expressionStatement.expression)) {
+            console.warn(`Couldn't extract typescript expression from svelte await expression at ${expr.position.start.line}:${expr.position.start.column}`)
+            return null;
+        }
+        return {
+            promiseExpr: expressionStatement.expression.expression,
+            hasThen: false
+        }
+    }
+
+    //find our then block
+    let thenKeyword: ts.Identifier;
+    let stmt = statements.find(s => ts.isExpressionStatement(s) &&  ts.isIdentifier(s.expression) && s.expression.escapedText == "then");
+    if (stmt) {
+        thenKeyword = ((stmt as ExpressionStatement).expression as Identifier);
+    } else {
+        //sometimes it is parsed as an element access expression ( blah then [a, b]) it sees the then part as 'then [a, b]' array access
+        stmt = statements.find(s => ts.isExpressionStatement(s) &&  ts.isElementAccessExpression(s.expression) && ts.isIdentifier(s.expression.expression) && s.expression.expression.escapedText == "then");
+        thenKeyword = (((stmt as ExpressionStatement).expression as ElementAccessExpression).expression as Identifier);
+    }
+
+    if (!thenKeyword) {
+        console.warn(`Couldn't parse multiple expressions from await expression at ${expr.position.start.line}:${expr.position.start.column}`)
+        return {
+            promiseExpr: null,
+            hasThen: false,
+        }
+    }
+    
+    //now we can parse again safely
+    const promiseExprText =  expr.value.substring(0, thenKeyword.pos - expr.position.start.offset);
+    const promiseSvelteExpression = {
+        type: expr.type,
+        value: promiseExprText,
+        position: expr.position //we can reuse the position here since we only consider start for generating the ast
+    }
+
+    const thenExprOffset = thenKeyword.pos + "then".length
+    const thenExprText = expr.value.substring(promiseExprText.length + "then".length + 1);
+
+    const promiseExpressionLines = promiseExprText.split("\n");
+
+    const thenSvelteexpression: SvelteExpression = {
+        type: expr.type,
+        value: thenExprText,
+        position: {
+            start: {
+                offset: expr.position.start.offset + promiseExprText.length + "then".length,
+                line: expr.position.start.line + promiseExpressionLines.length - 1,
+                column: promiseExpressionLines.length == 1 ? expr.position.start.column + promiseExprText.length + "then".length : promiseExpressionLines[promiseExpressionLines.length-1].length
+            },
+            end: expr.position.end //we can reuse the position here since we only consider start for generating the ast
+        }
+    }
+
+    return {
+        promiseExpr: expression_to_ast(promiseSvelteExpression),
+        hasThen: true,
+        thenExpr: expression_to_ast(thenSvelteexpression)
+    }
 }

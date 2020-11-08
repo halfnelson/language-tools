@@ -20,6 +20,7 @@ import { handleIf } from './nodes/if-else';
 import { handleRawHtml } from './nodes/raw-html';
 import { handleSvelteTag } from './nodes/svelte-tag';
 import { handleTransitionDirective } from './nodes/transition-directive';
+import { isBigIntLiteral } from 'typescript';
 
 
 type Walker = (node: Node, parent: Node, prop: string, index: number) => void;
@@ -59,16 +60,17 @@ export function convertHtmlxToJsx(
                             case 'if':
                                 handleIf(htmlx, str, bb);
                                 break;
-                            /*
+                            
                             case 'await':
                                 handleAwait(htmlx, str, bb);
                                 break;
-    
+                            /*
                             case 'key':
                                 handleKey(htmlx, str, bb);
                                 break;
                             */
                         }
+                        break;
 
                     /*
                     case 'svelteEachBlock':
@@ -96,11 +98,11 @@ export function convertHtmlxToJsx(
                     case 'svelteComponent':
                         handleComponent(htmlx, str, node as SvelteComponent);
                         break;
-    
+                        */
                     case 'svelteElement':
                         handleElement(htmlx, str, node as SvelteElement);
                         break;
-    
+    /*
                     case 'comment':
                         handleComment(str, node as Comment);
                         break;

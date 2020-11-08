@@ -26,6 +26,7 @@ function walkTs(node: ts.Node, opts: WalkTsOptions, parent: ts.Node, context: Ht
 
 
 function walkExpression(exprNode: SvelteExpression, opts: WalkTsOptions, parent: Node, prop: string) {
+    if (!exprNode.value) return;
     const ast = expression_to_ast(exprNode);
     walkTs(ast, opts, null, {
         node: exprNode,

@@ -1,14 +1,66 @@
 import MagicString from 'magic-string';
 import { Node } from 'estree-walker';
+import { Branch, BranchingBlock } from 'svast';
+import { end_offset, start_offset } from '../utils/node-utils';
+import { parse_await_expression } from '../utils/expression-to-ast';
 
 /**
  * Transform {#await ...} into something JSX understands
  */
-export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Node): void {
-    // {#await somePromise then value} ->
-    // {() => {let _$$p = (somePromise);
-    str.overwrite(awaitBlock.start, awaitBlock.expression.start, '{() => {let _$$p = (');
+export function handleAwait(htmlx: string, str: MagicString, awaitBlock: BranchingBlock): void {
+    // {#await -->
+    // {() => {let _$$p = (
+    str.overwrite(start_offset(awaitBlock), start_offset(awaitBlock) + "{#await".length + 1, '{() => {let _$$p = (');
 
+    for (const branch of awaitBlock.branches) {
+
+        if (branch.name == "await") {
+            var await_exprs = parse_await_expression(branch.expression);
+            if (await_exprs.hasThen) {
+                // somePromise then name}  --> 
+                // somePromise);  __sveltets_awaitThen(_$$p, (name) => {<>
+                str.overwrite(await_exprs.promiseExpr.end-1, await_exprs.thenExpr.pos+1, '); __sveltets_awaitThen(_$$p, (')
+                str.overwrite(await_exprs.thenExpr.end, await_exprs.thenExpr.end+1, ') => <>')
+            } else {
+                // somePromise} -->
+                // somePromise);<>
+                str.overwrite(await_exprs.promiseExpr.end, branch.expression.position.end.offset + 1, '); <>')
+            }
+            continue;
+        }
+
+        if (branch.name == "then") {
+            if (!branch.expression.position) {
+                //{:then} --> 
+                //</>;__sveltets_awaitThen(_$$p, () => <>
+                str.overwrite(start_offset(branch), start_offset(branch) + '{:then}'.length, '</>; __sveltets_awaitThen(_$$p, () => <>')
+            } else {
+                //{:then name} -->
+                //</>;__sveltets_awaitThen(_$$p, (name) => <>
+                str.overwrite(start_offset(branch), start_offset(branch) + '{:then'.length + 1, '</>; __sveltets_awaitThen(_$$p, (')
+                str.overwrite(end_offset(branch.expression), end_offset(branch.expression)+1, ') => <>')
+            }
+        }
+
+        if (branch.name == "catch") {
+            if (!branch.expression.position) {
+                //{:catch} --> 
+                //</>}, () => {<>
+                str.overwrite(start_offset(branch), start_offset(branch) + '{:catch}'.length, '</>, () => <>')
+            } else {
+                //{:catch name} -->
+                //</>}, (name) => {<>
+                str.overwrite(start_offset(branch), start_offset(branch) + '{:catch'.length+1, '</>, (')
+                str.overwrite(end_offset(branch.expression), end_offset(branch.expression)+1, ') => <>')
+            }
+        }
+    }
+
+    //{/await} --> 
+    //</>})}
+    str.overwrite(end_offset(awaitBlock)-('{/await}'.length),end_offset(awaitBlock), '</>)}}')
+
+    /*
     // then value } | {:then value} | {await ..} .. {/await} ->
     // __sveltets_awaitThen(_$$p, (value) => {<>
     let thenStart: number;
@@ -80,4 +132,5 @@ export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Node): 
     // <>})}
     const awaitEndStart = htmlx.lastIndexOf('{', awaitBlock.end - 1);
     str.overwrite(awaitEndStart, awaitBlock.end, '</>})}}');
+    */
 }

@@ -15,14 +15,14 @@ export function handleIf(htmlx: string, str: MagicString, ifBlock: BranchingBloc
         }
         // {:else if ....}  --->   </>} else if (....) {<>
         if (block.name == "else if") {
-            str.overwrite(block.position.start.offset, block.expression.position.start.offset, '</>} else if (');
+            str.overwrite(block.position.start.offset, block.expression.position.start.offset, '</>}else if (');
             str.overwrite(block.expression.position.end.offset, block.expression.position.end.offset + 1, '){<>');
         }
 
         // {:else}   --->   </>} else {<>
         if (block.name == "else") {
-            str.overwrite(block.position.start.offset, block.expression.position.start.offset, '</>} else');
-            str.overwrite(block.expression.position.end.offset, block.expression.position.end.offset + 1, '{<>');
+            str.overwrite(block.position.start.offset, block.position.start.offset+2, '</>}');
+            str.overwrite(block.children[0].position.start.offset-1, block.children[0].position.start.offset, '{<>');
         }
     }
 
