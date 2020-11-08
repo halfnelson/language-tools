@@ -23,7 +23,7 @@ export default [
         external: [...builtins, 'typescript', 'svelte', 'svelte/compiler', 'magic-string']
     },
     {
-        input: ['src/htmlxtojsx/index.ts'],
+        input: ['src/index-test.ts'],
         output: {
             sourcemap: true,
             format: 'commonjs',
