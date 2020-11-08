@@ -12,6 +12,8 @@ export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Branchi
     // {() => {let _$$p = (
     str.overwrite(start_offset(awaitBlock), start_offset(awaitBlock) + "{#await".length + 1, '{() => {let _$$p = (');
 
+    let handledThen = false;
+
     for (const branch of awaitBlock.branches) {
 
         if (branch.name == "await") {
@@ -21,6 +23,7 @@ export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Branchi
                 // somePromise);  __sveltets_awaitThen(_$$p, (name) => {<>
                 str.overwrite(await_exprs.promiseExpr.end-1, await_exprs.thenExpr.pos+1, '); __sveltets_awaitThen(_$$p, (')
                 str.overwrite(await_exprs.thenExpr.end, await_exprs.thenExpr.end+1, ') => <>')
+                handledThen = true;
             } else {
                 // somePromise} -->
                 // somePromise);<>
@@ -30,6 +33,7 @@ export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Branchi
         }
 
         if (branch.name == "then") {
+            handledThen = true;
             if (!branch.expression.position) {
                 //{:then} --> 
                 //</>;__sveltets_awaitThen(_$$p, () => <>
@@ -46,19 +50,20 @@ export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Branchi
             if (!branch.expression.position) {
                 //{:catch} --> 
                 //</>}, () => {<>
-                str.overwrite(start_offset(branch), start_offset(branch) + '{:catch}'.length, '</>, () => <>')
+                str.overwrite(start_offset(branch), start_offset(branch) + '{:catch}'.length, `${handledThen ? '' : '</>; __sveltets_awaitThen(_$$p, () => <>'}</>, () => <>`)
             } else {
                 //{:catch name} -->
                 //</>}, (name) => {<>
-                str.overwrite(start_offset(branch), start_offset(branch) + '{:catch'.length+1, '</>, (')
+                str.overwrite(start_offset(branch), start_offset(branch) + '{:catch'.length+1, `${handledThen ? '' : '</>; __sveltets_awaitThen(_$$p, () => <>'}</>, (`)
                 str.overwrite(end_offset(branch.expression), end_offset(branch.expression)+1, ') => <>')
             }
+            handledThen = true;
         }
     }
 
     //{/await} --> 
     //</>})}
-    str.overwrite(end_offset(awaitBlock)-('{/await}'.length),end_offset(awaitBlock), '</>)}}')
+    str.overwrite(end_offset(awaitBlock)-('{/await}'.length),end_offset(awaitBlock), `${handledThen ? '' : '</>; __sveltets_awaitThen(_$$p, () => <>'}</>)}}`)
 
     /*
     // then value } | {:then value} | {await ..} .. {/await} ->
