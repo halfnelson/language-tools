@@ -244,8 +244,8 @@ declare namespace svelte.JSX {
       cite?: string;
       classid?: string;
       classname?: ClassName;
-      cols?: number;
-      colspan?: number;
+      cols?: number | string;
+      colspan?: number | string;
       content?: string;
       contenteditable?: 'true' | 'false' | boolean;
 
@@ -265,12 +265,12 @@ declare namespace svelte.JSX {
       controls?: boolean;
       coords?: string;
       crossorigin?: string;
-      currenttime?: number;
+      currenttime?: number | string;
       data?: string;
       datetime?: string;
       default?: boolean;
       defaultmuted?: boolean;
-      defaultplaybackrate?: number;
+      defaultplaybackrate?: number | string;
       defer?: boolean;
       dir?: string;
       disabled?: boolean;
@@ -288,7 +288,7 @@ declare namespace svelte.JSX {
       headers?: string;
       height?: number | string;
       hidden?: boolean;
-      high?: number;
+      high?: number | string;
       href?: string;
       hreflang?: string;
       htmlfor?: string;
@@ -306,24 +306,24 @@ declare namespace svelte.JSX {
       list?: string;
       loading?: string;
       loop?: boolean;
-      low?: number;
+      low?: number | string;
       manifest?: string;
-      marginheight?: number;
-      marginwidth?: number;
+      marginheight?: number | string;
+      marginwidth?: number | string;
       max?: number | string;
-      maxlength?: number;
+      maxlength?: number | string;
       media?: string;
       mediagroup?: string;
       method?: string;
       min?: number | string;
-      minlength?: number;
+      minlength?: number | string;
       multiple?: boolean;
       muted?: boolean;
       name?: string;
       nonce?: string;
       novalidate?: boolean;
       open?: boolean;
-      optimum?: number;
+      optimum?: number | string;
       pattern?: string;
       placeholder?: string;
       playsinline?: boolean;
@@ -335,8 +335,8 @@ declare namespace svelte.JSX {
       required?: boolean;
       reversed?: boolean;
       role?: string;
-      rows?: number;
-      rowspan?: number;
+      rows?: number | string;
+      rowspan?: number | string;
       sandbox?: string;
       scope?: string;
       scoped?: boolean;
@@ -344,20 +344,20 @@ declare namespace svelte.JSX {
       seamless?: boolean;
       selected?: boolean;
       shape?: string;
-      size?: number;
+      size?: number | string;
       sizes?: string;
       slot?: string;
-      span?: number;
+      span?: number | string;
       spellcheck?: boolean;
       src?: string;
       srcdoc?: string;
       srclang?: string;
       srcset?: string;
-      start?: number;
+      start?: number | string;
       step?: number | string;
       style?: string;
       summary?: string;
-      tabindex?: number;
+      tabindex?: number | string;
       target?: string;
       title?: string;
       type?: string;
@@ -366,7 +366,7 @@ declare namespace svelte.JSX {
       /**
        * a value between 0 and 1
       */
-      volume?: number;
+      volume?: number | string;
       width?: number | string;
       wmode?: string;
       wrap?: string;
@@ -391,7 +391,7 @@ declare namespace svelte.JSX {
       itemtype?: string;
       itemid?: string;
       itemref?: string;
-      results?: number;
+      results?: number | string;
       security?: string;
       unselectable?: boolean;
     }
@@ -424,7 +424,7 @@ declare namespace svelte.JSX {
 
       // Other HTML properties supported by SVG elements in browsers
       role?: string;
-      tabindex?: number;
+      tabindex?: number | string;
       crossorigin?: 'anonymous' | 'use-credentials' | '';
 
       // SVG Specific attributes
