@@ -1,9 +1,10 @@
 import MagicString from 'magic-string';
-import { Node } from 'estree-walker';
+import { Comment } from 'svast';
+import { end_offset, start_offset } from '../utils/node-utils';
 
 /**
  * Removes comment
  */
-export function handleComment(str: MagicString, node: Node): void {
-    str.remove(node.start, node.end);
+export function handleComment(str: MagicString, node: Comment): void {
+    str.remove(start_offset(node), end_offset(node));
 }

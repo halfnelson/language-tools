@@ -102,14 +102,15 @@ export function convertHtmlxToJsx(
                     case 'svelteElement':
                         handleElement(htmlx, str, node as SvelteElement);
                         break;
-    /*
+    
                     case 'comment':
                         handleComment(str, node as Comment);
                         break;
-    
+      
                     case 'svelteProperty':
-                        handleAttribute(htmlx, str, node as Property, parent)
-                    
+                        handleAttribute(htmlx, str, node as Property, parent);
+                        break;
+                /*  
                     case 'svelteDirective':
                         const dir = node as Directive;
                         switch (dir.name) {
