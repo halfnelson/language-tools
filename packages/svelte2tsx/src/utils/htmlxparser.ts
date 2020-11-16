@@ -1,7 +1,7 @@
-import { parse } from 'svelte-parse';
+import { parse } from 'htmlx-parser-svast';
 import { Root } from 'svast';
 
 export function parseHtmlx(htmlx: string): Root {
-    const svelteHtmlxAst = parse({ value: htmlx, generatePositions: true });
-    return svelteHtmlxAst;
+    const svelteHtmlxAst = parse(htmlx)
+    return svelteHtmlxAst.ast;
 }

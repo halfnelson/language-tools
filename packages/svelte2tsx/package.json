@@ -32,9 +32,9 @@
         "@rollup/plugin-typescript": "^6.0.0",
         "source-map": "^0.6.1",
         "source-map-support": "^0.5.16",
-        "svelte-parse": "^0.0.2",
-        "svast": "^0.0.2",
-        "svast-utils": "^0.0.2",
+        "htmlx-parser-svast": "^0.1.2",
+        "svast": "^0.0.3",
+        "svast-utils": "^0.0.3",
         "tiny-glob": "^0.2.6",
         "tslib": "^1.10.0",
         "typescript": "^4.0.2"

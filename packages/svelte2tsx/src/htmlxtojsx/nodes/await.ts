@@ -34,7 +34,7 @@ export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Branchi
 
         if (branch.name == "then") {
             handledThen = true;
-            if (!branch.expression.position) {
+            if (!branch.expression?.position) {
                 //{:then} --> 
                 //</>;__sveltets_awaitThen(_$$p, () => <>
                 str.overwrite(start_offset(branch), start_offset(branch) + '{:then}'.length, '</>; __sveltets_awaitThen(_$$p, () => <>')
@@ -47,7 +47,7 @@ export function handleAwait(htmlx: string, str: MagicString, awaitBlock: Branchi
         }
 
         if (branch.name == "catch") {
-            if (!branch.expression.position) {
+            if (!branch.expression?.position) {
                 //{:catch} --> 
                 //</>}, () => {<>
                 str.overwrite(start_offset(branch), start_offset(branch) + '{:catch}'.length, `${handledThen ? '' : '</>; __sveltets_awaitThen(_$$p, () => <>'}</>, () => <>`)
