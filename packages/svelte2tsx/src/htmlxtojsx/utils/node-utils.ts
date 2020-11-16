@@ -1,8 +1,16 @@
 import { Node } from 'estree-walker';
-import { Node as SvastNode } from 'svast';
-import { nodeModuleNameResolver } from 'typescript';
+import { Branch, Node as SvastNode, Directive, Property, Root, SvelteChild, SvelteScript, SvelteStyle } from 'svast';
 
-
+export type SvelteNode = 
+	| SvelteChild 
+	| Root
+	| SvelteScript
+	| SvelteStyle
+	| Property
+	| Directive
+    | Branch
+    
+    
 export function getTypeForComponent(node: Node): string {
     if (node.name === 'svelte:component' || node.name === 'svelte:self') {
         return '__sveltets_componentType()';
