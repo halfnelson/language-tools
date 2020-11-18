@@ -1,6 +1,7 @@
 import MagicString from 'magic-string';
-import { Node } from 'estree-walker';
-import { isShortHandAttribute, getThisType } from '../utils/node-utils';
+
+import { getThisType, start_offset, end_offset } from '../utils/node-utils';
+import { Directive, SvelteComponent, SvelteElement, SvelteExpression, SvelteMeta } from 'svast';
 
 const oneWayBindingAttributes: Map<string, string> = new Map(
     ['clientWidth', 'clientHeight', 'offsetWidth', 'offsetHeight']
@@ -13,70 +14,59 @@ const oneWayBindingAttributes: Map<string, string> = new Map(
         )
 );
 
+
 /**
  * Transform bind:xxx into something that conforms to JSX
  */
-export function handleBinding(htmlx: string, str: MagicString, attr: Node, el: Node): void {
+export function handleBinding(htmlx: string, str: MagicString, attr: Directive, el: SvelteElement | SvelteComponent | SvelteMeta): void {
+    const hasValue = attr.value && attr.value.length > 0
+    const expr = hasValue ? attr.value[0] as SvelteExpression : null;
+    
     //bind group on input
-    if (attr.name == 'group' && el.name == 'input') {
-        str.remove(attr.start, attr.expression.start);
-        str.appendLeft(attr.expression.start, '{...__sveltets_empty(');
-
-        const endBrackets = ')}';
-        if (isShortHandAttribute(attr)) {
-            str.prependRight(attr.end, endBrackets);
+    if (attr.specifier == 'group' && el.tagName == 'input') {
+        if (expr) {
+            str.overwrite(start_offset(attr), start_offset(expr)+1, '{...__sveltets_empty(')
+            str.overwrite(end_offset(expr)-1, end_offset(attr), ')}');
         } else {
-            str.overwrite(attr.expression.end, attr.end, endBrackets);
+            str.overwrite(start_offset(attr), end_offset(attr), `{...__sveltets_empty(group)}`);
         }
         return;
     }
 
-    const supportsBindThis = ['InlineComponent', 'Element', 'Body'];
+    const supportsBindThis = ['svelteComponent', 'svelteElement', 'svelteMeta'];
 
     //bind this
-    if (attr.name === 'this' && supportsBindThis.includes(el.type)) {
+    if (attr.specifier === 'this' && supportsBindThis.includes(el.type)) {
         const thisType = getThisType(el);
 
         if (thisType) {
-            str.remove(attr.start, attr.expression.start);
-            str.appendLeft(attr.expression.start, `{...__sveltets_ensureType(${thisType}, `);
-            str.overwrite(attr.expression.end, attr.end, ')}');
+            if (expr) {
+                str.overwrite(start_offset(attr), start_offset(expr)+1, `{...__sveltets_ensureType(${thisType}, `)
+                str.overwrite(end_offset(expr)-1, end_offset(attr), `)}`);
+            } else {
+                str.overwrite(start_offset(attr), end_offset(attr), `{...__sveltets_ensureType(${thisType},this)}`);
+            }
             return;
+        } else {
+            throw new Error("Couldn't determing this type");
         }
     }
 
     //one way binding
-    if (oneWayBindingAttributes.has(attr.name) && el.type === 'Element') {
-        str.remove(attr.start, attr.expression.start);
-        str.appendLeft(attr.expression.start, '{...__sveltets_empty(');
-        if (isShortHandAttribute(attr)) {
-            // eslint-disable-next-line max-len
-            str.appendLeft(
-                attr.end,
-                `=__sveltets_instanceOf(${oneWayBindingAttributes.get(attr.name)}).${attr.name})}`
-            );
+    if (oneWayBindingAttributes.has(attr.specifier) && el.type === 'svelteElement') {
+        if (expr) {
+            str.overwrite(start_offset(attr), start_offset(expr)+1, `{...__sveltets_empty(`)
+            str.overwrite(end_offset(expr)-1, end_offset(attr), `=__sveltets_instanceOf(${oneWayBindingAttributes.get(attr.specifier)}).${attr.specifier})}`);
         } else {
-            // eslint-disable-next-line max-len
-            str.overwrite(
-                attr.expression.end,
-                attr.end,
-                `=__sveltets_instanceOf(${oneWayBindingAttributes.get(attr.name)}).${attr.name})}`
-            );
+            str.overwrite(start_offset(attr), end_offset(attr), `{...__sveltets_empty(${attr.specifier}=__sveltets_instanceOf(${oneWayBindingAttributes.get(attr.specifier)}).${attr.specifier})}`);
         }
         return;
     }
 
-    str.remove(attr.start, attr.start + 'bind:'.length);
-    if (attr.expression.start === attr.start + 'bind:'.length) {
-        str.prependLeft(attr.expression.start, `${attr.name}={`);
-        str.appendLeft(attr.end, '}');
-        return;
-    }
-
-    //remove possible quotes
-    if (htmlx[attr.end - 1] === '"') {
-        const firstQuote = htmlx.indexOf('"', attr.start);
-        str.remove(firstQuote, firstQuote + 1);
-        str.remove(attr.end - 1, attr.end);
+    if (expr) {
+        str.overwrite(start_offset(attr), start_offset(expr)+1, `${attr.specifier}={`)
+        str.overwrite(end_offset(expr)-1, end_offset(attr), `}`);
+    } else {
+        str.overwrite(start_offset(attr), end_offset(attr), `${attr.specifier}={${attr.specifier}}`)
     }
 }

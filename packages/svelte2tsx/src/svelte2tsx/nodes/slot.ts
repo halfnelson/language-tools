@@ -10,7 +10,7 @@ import {
 } from '../../utils/svelteAst';
 import TemplateScope from './TemplateScope';
 import { SvelteIdentifier, WithName, BaseDirective } from '../../interfaces';
-import { getTypeForComponent } from '../../htmlxtojsx/utils/node-utils';
+import { getThisType } from '../../htmlxtojsx/utils/node-utils';
 
 function attributeStrValueAsJsExpression(attr: Node): string {
     if (attr.value.length == 0) return "''"; //wut?
@@ -260,6 +260,6 @@ export class SlotHandler {
 }
 
 export function getSingleSlotDef(componentNode: Node, slotName: string) {
-    const componentType = getTypeForComponent(componentNode);
+    const componentType = getThisType(componentNode);
     return `__sveltets_instanceOf(${componentType}).$$slot_def['${slotName}']`;
 }

@@ -89,12 +89,12 @@ export function convertHtmlxToJsx(
                                 break;
                         }
                         break;
-                
-                    case 'svelteTag': 
+                    */
+                    case 'svelteMeta': 
                         //svelte:(options,window,head,body)
                         handleSvelteTag(htmlx, str, node as SvelteMeta);
                         break;
-    
+                        /*
                     case 'svelteComponent':
                         handleComponent(htmlx, str, node as SvelteComponent);
                         break;
@@ -110,14 +110,15 @@ export function convertHtmlxToJsx(
                     case 'svelteProperty':
                         handleAttribute(htmlx, str, node as Property, parent);
                         break;
-                /*  
+                  
                     case 'svelteDirective':
                         const dir = node as Directive;
+                        const tag = parent as SvelteElement | SvelteComponent | SvelteMeta;
                         switch (dir.name) {
                             case 'bind':
-                                handleBinding(htmlx, str, node, parent);
+                                handleBinding(htmlx, str, dir, tag);
                                 break;
-                            case 'class':
+                    /*        case 'class':
                                 handleClassDirective(htmlx, str, node)
                                 break;
                             case 'use':
@@ -133,9 +134,9 @@ export function convertHtmlxToJsx(
                                 break;
                             case 'on':
                                 handleEventHandler(htmlx, str, node, parent);
-                                break;
+                                break; */
                         }
-                        break; */
+                        break; 
                 }
                 onEnter?.(node, parent, prop, index);
 

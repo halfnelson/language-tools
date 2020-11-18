@@ -1,5 +1,5 @@
 import { Node } from 'estree-walker';
-import { Branch, Node as SvastNode, Directive, Property, Root, SvelteChild, SvelteScript, SvelteStyle } from 'svast';
+import { Branch, Node as SvastNode, Directive, Property, Root, SvelteChild, SvelteScript, SvelteStyle, SvelteComponent, SvelteElement } from 'svast';
 
 export type SvelteNode = 
 	| SvelteChild 
@@ -11,31 +11,24 @@ export type SvelteNode =
     | Branch
     
     
-export function getTypeForComponent(node: Node): string {
-    if (node.name === 'svelte:component' || node.name === 'svelte:self') {
-        return '__sveltets_componentType()';
-    } else {
-        return node.name;
-    }
-}
-
-export function getThisType(node: Node): string | undefined {
+export function getThisType(node: SvastNode): string | undefined {
     switch (node.type) {
-        case 'InlineComponent':
-            return getTypeForComponent(node);
-        case 'Element':
-            return `__sveltets_ctorOf(__sveltets_mapElementTag('${node.name}'))`;
-        case 'Body':
-            return 'HTMLBodyElement';
+        case 'svelteComponent':
+            return (node as SvelteComponent).tagName;
+        case 'svelteElement':
+            return `__sveltets_ctorOf(__sveltets_mapElementTag('${(node as SvelteElement).tagName}'))`;
+        case 'svelteMeta':
+            if (node.tagName === 'component' || node.tagName === 'self') 
+                return '__sveltets_componentType()';
+            if (node.tagName == 'body') 
+                return 'HTMLBodyElement';
+            if (node.tagName == 'window')
+                return 'Window'
     }
 }
 
 export function beforeStart(start: number): number {
     return start - 1;
-}
-
-export function isShortHandAttribute(attr: Node): boolean {
-    return attr.expression.end === attr.end;
 }
 
 export function start_offset(node: SvastNode): number {
